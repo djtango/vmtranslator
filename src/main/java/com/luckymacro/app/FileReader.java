@@ -14,7 +14,7 @@ public class FileReader {
         try {
             Path f = new File(filename).toPath();
             Files.copy(f, baos);
-            String out = baos.toString(StandardCharsets.UTF_8);
+            String out = baos.toString(StandardCharsets.UTF_8.name());
             return out;
         }
         catch (IOException e) {
