@@ -1,6 +1,5 @@
 package com.luckymacro.app;
 
-import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
