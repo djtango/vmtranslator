@@ -1,11 +1,13 @@
 package com.luckymacro.app;
 
 public class Parser {
-    public static String parse( String lines ) {
-        String[] cmds = lines.split("\\n");
-        String cmd1 = cmds[0];
-        String cmd2 = cmds[1];
-        return push(cmd1) + push(cmd2) + add();
+    public static String parse( String vmcode ) {
+        String[] lines = vmcode.split("\\n");
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i < lines.length; i += 1) {
+            sb.append(dispatch(lines[i]));
+        }
+        return sb.toString();
     }
 
     private static final String incSp = "@SP\nM=M+1\n";
@@ -34,5 +36,15 @@ public class Parser {
             decSp +
             readSpToMAndAddToD +
             incSp;
+    }
+
+    private static String dispatch(String cmd) {
+        String[] words = cmd.split("\\s");
+        String command = words[0];
+        if (command.contentEquals("push")) {
+            return push(cmd);
+        } else {
+            return add();
+        }
     }
 }
