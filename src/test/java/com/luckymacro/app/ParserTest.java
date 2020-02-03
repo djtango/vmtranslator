@@ -18,6 +18,6 @@ public class ParserTest {
     @Test
     public void shouldAnswerWithTrue() {
         String result = Parser.parse(lines);
-        assertTrue(result.equals(expt));
+        assertTrue(result.contentEquals(expt));
     }
 }
