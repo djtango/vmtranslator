@@ -6,8 +6,9 @@ package com.luckymacro.app;
 
 public class VMTranslator {
     public static void main( String[] args ) {
-        String filename = args[0];
-        String fileContents = FileReader.read(filename);
+        String[] paths = args[0].split("\\.vm");
+        String filename = paths[0];
+        String fileContents = FileReader.read(filename + ".vm");
         String output = Parser.parse(fileContents);
         FileWriter.write(filename + ".asm", output);
     }
