@@ -5,7 +5,11 @@ public class Parser {
         String[] lines = vmcode.split("\\n");
         StringBuilder sb = new StringBuilder();
         for (int i=0; i < lines.length; i += 1) {
-            sb.append(dispatch(lines[i]));
+            String line = lines[i];
+            if (lineToKeep(line)) {
+                sb.append("// " + line + "\n");
+                sb.append(dispatch(line));
+            }
         }
         return sb.toString();
     }
@@ -46,5 +50,11 @@ public class Parser {
         } else {
             return add();
         }
+    }
+
+    public static boolean lineToKeep(String line) {
+        boolean isCommentLine = line.matches("^\\r*\\/\\/[^\n]*");
+        boolean isEmptyLine = line.matches("^[\\s\\r]*$");
+        return !(isCommentLine || isEmptyLine);
     }
 }
