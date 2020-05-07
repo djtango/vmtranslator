@@ -1,4 +1,8 @@
 package com.luckymacro.app;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
+import java.util.Arrays;
 
 public class Parser {
     public static String parse( String vmcode ) {
@@ -31,6 +35,60 @@ public class Parser {
         }
     }
 
+    private static class CmdBuilder {
+        public List<String> out;
+        public ParserState cmdState;
+        private StringBuilder sb;
+        CmdBuilder(ParserState state) {
+            cmdState = state;
+            out = new ArrayList<String>();
+        }
+
+        public CmdBuilder n( String line ) {
+            out.add(line);
+            return this;
+        }
+
+        public CmdBuilder n( String[] lines ) {
+            for (int i=0; i < lines.length; i +=1) {
+                String line = lines[i];
+                out.add(line);
+            }
+            return this;
+        }
+
+        public CmdBuilder acmds( ACmds as ) {
+            as.toArrayList().forEach(new Consumer <ACmd>() {
+                @Override
+                public void accept(ACmd a) {
+                    out.add(a.value);
+                }
+            });
+            return this;
+        }
+
+        public CmdBuilder n ( ArrayList<String> lines ) {
+            lines.forEach(new Consumer <String>() {
+                @Override
+                public void accept(String s) {
+                    out.add(s);
+                }
+            });
+            return this;
+        }
+
+        public String finish () {
+            sb = new StringBuilder();
+            out.forEach(new Consumer<String>() {
+                @Override
+                public void accept(String s) {
+                    sb.append(s + "\n");
+                }
+            });
+            return sb.toString();
+        }
+    }
+
     private static final String incSp = "@SP\nM=M+1\n";
     private static final String decSp = "@SP\nM=M-1\n";
     private static final String derefSp = "@SP\nA=M\n";
@@ -38,6 +96,7 @@ public class Parser {
     private static final String deleteStackEntry = "M=0\n";
     private static final String setSpToD = derefSp + "M=D\n";
     private static final String readSpToMAndAddToD = "A=M\nM=M+D\n";
+    private static final String popD = decSp + readSpToD + deleteStackEntry;
 
     private static String readVariableToD(String memSegment, String segAddr) {
         return String.format("@%1$s\nD=A\n", segAddr);
@@ -93,8 +152,32 @@ public class Parser {
             incSp;
     }
 
-    private static String lt() {
-        return "";
+    private static ACmd a(String s) {
+        return new ACmd(s);
+    }
+
+    private static String lt(ParserState state) {
+        // a is less than b if a - b < 0
+
+        ACmds decSp = new ACmds(a("@SP"), a("M=M-1"));
+        ACmds readSpToD = new ACmds(a("A=M"), a("D=M"));
+        ACmd deleteStackEntry = a("M=0");
+        ACmds popD =
+            new ACmds(decSp)
+            .add(readSpToD)
+            .add(deleteStackEntry);
+        ACmds readSpToMAndSubDToD = new ACmds(a("A=M"), a("D=D-M"));
+        ACmds asm =
+            new ACmds(popD)
+            .add(decSp)
+            .add(readSpToMAndSubDToD);
+        // think about parameterizing an ACmd form for symbols
+        return new CmdBuilder(state).acmds(asm).finish();
+        // return new CmdBuilder(state)
+        //     .n(popD)
+        //     .n(decSp)
+        //     .n(readSpToMAndSubDToD)
+        //     .finish();
     }
 
     private static String gt() {
@@ -102,12 +185,12 @@ public class Parser {
     }
 
     private static String sub() {
-        String readSpToMAndSubFromD = "A=M\nM=M-D\n";
+        String readSpToMAndSubD = "A=M\nM=M-D\n";
         return decSp +
             readSpToD +
             deleteStackEntry +
             decSp +
-            readSpToMAndAddToD +
+            readSpToMAndSubD +
             incSp;
     }
 
@@ -134,7 +217,7 @@ public class Parser {
         switch (command) {
             case "push": result = push(cmd); break;
             case "eq": result = eq(state); break;
-            case "lt": result = lt(); break;
+            case "lt": result = lt(state); break;
             case "gt": result = gt(); break;
             case "add": result = add(); break;
             case "sub": result = sub(); break;
