@@ -1,0 +1,12 @@
+push constant 2
+push constant 1
+sub
+push constant 20
+push constant 10
+sub
+push constant 3
+push constant 3
+sub
+push constant 3
+push constant 4
+sub
