@@ -46,26 +46,75 @@ public class Parser {
         return new ACmd(s);
     }
 
-    private static final ACmds incSp = new ACmds(a("@SP"), a("M=M+1"));
-    private static final ACmds decSp = new ACmds(a("@SP"), a("M=M-1"));
-    private static final ACmds derefSp = new ACmds(a("@SP"), a("A=M"));
+    private static final ACmd sp = a("@SP");
+    private static final ACmd local = a("@LCL");
+    private static final ACmd arg = a("@ARG");
+    private static final ACmd aThis = a("@THIS");
+    private static final ACmd aThat = a("@THAT");
+
+    private static final ACmds incSp = new ACmds(sp, a("M=M+1"));
+    private static final ACmds decSp = new ACmds(sp, a("M=M-1"));
+    private static final ACmds derefSp = new ACmds(sp, a("A=M"));
     private static final ACmds readSpToD = new ACmds(a("A=M"), a("D=M"));
     private static final ACmd deleteStackEntry = a("M=0");
     private static final ACmds pushD = new ACmds(derefSp).add(a("M=D")).add(incSp);
     private static final ACmds readSpToMAndAddToD = new ACmds(a("A=M"), a("M=M+D"));
     private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry);
 
-    private static ACmds readVariableToD(String memSegment, String segAddr) {
-        return new ACmds(a(String.format("@%1$s", segAddr)), a("D=A"));
+    private static ACmds pushConstant(String index) {
+        return new ACmds(a(String.format("@%1$s", index)), a("D=A")).add(pushD);
+    }
+
+    private static ACmds pushLocal(String index) {
+        return new
+            ACmds(a("@" + index))
+            .add(a("D=A"))
+            .add(local)
+            .add(a("A=A+D"))
+            .add(a("D=M"))
+            .add(pushD);
     }
 
     private static String push(String cmd) {
         String[] words = cmd.split("\\s");
-        String memSegment = words[1];
-        String segAddr = words[2];
-        return cmdToString(
-                new
-                ACmds(readVariableToD(memSegment, segAddr)).add(pushD));
+        String segment = words[1];
+        String index = words[2];
+        ACmds result = new ACmds(a("//"));
+        switch (segment) {
+            case "constant": result = pushConstant(index); break;
+            case "local": result = pushLocal(index); break;
+            // case "not": result = not(); break;
+        }
+        return cmdToString(result);
+    }
+
+    private static ACmds popLocal(String index) {
+        ACmds freeIndex = new ACmds(a("@R13"), a("M=0"));
+        ACmds storeSegPointer = new
+            ACmds(a("@" + index))
+            .add(a("D=A"))
+            .add(local)
+            .add(a("D=D+A"))
+            .add(a("@R13"))
+            .add(a("M=D"));
+        ACmds readStoredPointer = new ACmds(a("@R13"), a("A=M"));
+        return new
+            ACmds(storeSegPointer)
+            .add(popD)
+            .add(readStoredPointer)
+            .add(a("M=D"))
+            .add(freeIndex);
+    }
+
+    private static String pop(String cmd) {
+        String[] words = cmd.split("\\s");
+        String segment = words[1];
+        String index = words[2];
+        ACmds result = new ACmds(a("//"));
+        switch (segment) {
+            case "local": result = popLocal(index); break;
+        }
+        return cmdToString(result);
     }
 
     private static String add() {
@@ -243,6 +292,7 @@ public class Parser {
         String result = "";
         switch (command) {
             case "push": result = push(cmd); break;
+            case "pop": result = pop(cmd); break;
             case "eq": result = eq(state); break;
             case "lt": result = lt(state); break;
             case "gt": result = gt(state); break;
