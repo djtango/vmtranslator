@@ -65,11 +65,11 @@ public class Parser {
         return new ACmds(a(String.format("@%1$s", index)), a("D=A")).add(pushD);
     }
 
-    private static ACmds pushLocal(String index) {
+    private static ACmds pushVirtualSegment(ACmd atSegment, String index) {
         return new
             ACmds(a("@" + index))
             .add(a("D=A"))
-            .add(local)
+            .add(atSegment)
             .add(a("A=A+D"))
             .add(a("D=M"))
             .add(pushD);
@@ -82,8 +82,8 @@ public class Parser {
         ACmds result = new ACmds(a("//"));
         switch (segment) {
             case "constant": result = pushConstant(index); break;
-            case "local": result = pushLocal(index); break;
-            // case "not": result = not(); break;
+            case "local": result = pushVirtualSegment(local, index); break;
+            case "argument": result = pushVirtualSegment(arg, index); break;
         }
         return cmdToString(result);
     }
@@ -106,6 +106,27 @@ public class Parser {
             .add(freeIndex);
     }
 
+    private static ACmds storeSegmentPointer(ACmd atSegment, String index) {
+        return new
+            ACmds(a("@" + index))
+            .add(a("D=A"))
+            .add(atSegment)
+            .add(a("D=D+A"))
+            .add(a("@R13"))
+            .add(a("M=D"));
+    }
+
+    private static ACmds popArgument(String index) {
+        ACmds freeIndex = new ACmds(a("@R13"), a("M=0"));
+        ACmds readStoredPointer = new ACmds(a("@R13"), a("A=M"));
+        return new
+            ACmds(storeSegmentPointer(arg, index))
+            .add(popD)
+            .add(readStoredPointer)
+            .add(a("M=D"))
+            .add(freeIndex);
+    }
+
     private static String pop(String cmd) {
         String[] words = cmd.split("\\s");
         String segment = words[1];
@@ -113,6 +134,7 @@ public class Parser {
         ACmds result = new ACmds(a("//"));
         switch (segment) {
             case "local": result = popLocal(index); break;
+            case "argument": result = popArgument(index); break;
         }
         return cmdToString(result);
     }
