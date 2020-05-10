@@ -201,7 +201,12 @@ public class Parser {
     }
 
     private static String neg() {
-        return "";
+        return cmdToString(new
+                ACmds(popD)
+                .add(a("D=!D"))
+                .add(incSp)
+                .add(pushD)
+                );
     }
 
     private static String and() {

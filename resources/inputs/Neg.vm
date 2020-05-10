@@ -1,0 +1,8 @@
+push constant 0
+neg
+push constant 1
+neg
+push constant 8
+neg
+push constant 32767
+neg
