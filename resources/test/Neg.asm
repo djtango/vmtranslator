@@ -12,7 +12,7 @@ M=M-1
 A=M
 D=M
 M=0
-D=!D
+D=-D
 @SP
 A=M
 M=D
@@ -32,7 +32,7 @@ M=M-1
 A=M
 D=M
 M=0
-D=!D
+D=-D
 @SP
 A=M
 M=D
@@ -52,7 +52,7 @@ M=M-1
 A=M
 D=M
 M=0
-D=!D
+D=-D
 @SP
 A=M
 M=D
@@ -72,7 +72,7 @@ M=M-1
 A=M
 D=M
 M=0
-D=!D
+D=-D
 @SP
 A=M
 M=D

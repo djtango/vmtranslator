@@ -203,8 +203,7 @@ public class Parser {
     private static String neg() {
         return cmdToString(new
                 ACmds(popD)
-                .add(a("D=!D"))
-                .add(incSp)
+                .add(a("D=-D"))
                 .add(pushD)
                 );
     }
