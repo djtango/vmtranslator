@@ -51,6 +51,7 @@ public class Parser {
     private static final ACmd arg = a("@ARG");
     private static final ACmd aThis = a("@THIS");
     private static final ACmd aThat = a("@THAT");
+    private static final ACmd temp = a("@5");
 
     private static final ACmds incSp = new ACmds(sp, a("M=M+1"));
     private static final ACmds decSp = new ACmds(sp, a("M=M-1"));
@@ -65,12 +66,29 @@ public class Parser {
         return new ACmds(a(String.format("@%1$s", index)), a("D=A")).add(pushD);
     }
 
-    private static ACmds pushVirtualSegment(ACmd atSegment, String index) {
+    private static ACmds pushVirtualSegment(ACmd base, String index) {
         return new
             ACmds(a("@" + index))
             .add(a("D=A"))
-            .add(atSegment)
-            .add(a("A=A+D"))
+            .add(base)
+            .add(a("A=M+D"))
+            .add(a("D=M"))
+            .add(pushD);
+    }
+
+    private static String absoluteTempIndex(String index) {
+        int idx = Integer.parseInt(index);
+        if (idx > 7) {
+            System.out.println("ERROR: TEMP index overflow");
+        }
+        int TEMP = 5;
+        return Integer.toString(TEMP + idx);
+    }
+
+    private static ACmds pushTempSegment(String index) {
+        ACmd atTempIdx = a("@" + absoluteTempIndex(index));
+        return new
+            ACmds(atTempIdx)
             .add(a("D=M"))
             .add(pushD);
     }
@@ -84,26 +102,11 @@ public class Parser {
             case "constant": result = pushConstant(index); break;
             case "local": result = pushVirtualSegment(local, index); break;
             case "argument": result = pushVirtualSegment(arg, index); break;
+            case "this": result = pushVirtualSegment(aThis, index); break;
+            case "that": result = pushVirtualSegment(aThat, index); break;
+            case "temp": result = pushTempSegment(index); break;
         }
         return cmdToString(result);
-    }
-
-    private static ACmds popLocal(String index) {
-        ACmds freeIndex = new ACmds(a("@R13"), a("M=0"));
-        ACmds storeSegPointer = new
-            ACmds(a("@" + index))
-            .add(a("D=A"))
-            .add(local)
-            .add(a("D=D+A"))
-            .add(a("@R13"))
-            .add(a("M=D"));
-        ACmds readStoredPointer = new ACmds(a("@R13"), a("A=M"));
-        return new
-            ACmds(storeSegPointer)
-            .add(popD)
-            .add(readStoredPointer)
-            .add(a("M=D"))
-            .add(freeIndex);
     }
 
     private static ACmds storeSegmentPointer(ACmd atSegment, String index) {
@@ -111,20 +114,31 @@ public class Parser {
             ACmds(a("@" + index))
             .add(a("D=A"))
             .add(atSegment)
-            .add(a("D=D+A"))
+            .add(a("D=D+M"))
             .add(a("@R13"))
             .add(a("M=D"));
     }
 
-    private static ACmds popArgument(String index) {
+    private static ACmds popVirtualSegment(ACmd atSegment, String index) {
         ACmds freeIndex = new ACmds(a("@R13"), a("M=0"));
         ACmds readStoredPointer = new ACmds(a("@R13"), a("A=M"));
         return new
-            ACmds(storeSegmentPointer(arg, index))
+            ACmds(storeSegmentPointer(atSegment, index))
             .add(popD)
             .add(readStoredPointer)
             .add(a("M=D"))
             .add(freeIndex);
+    }
+
+    private static ACmds popTempSegment(String index) {
+        int idx = Integer.parseInt(index);
+        if (idx > 7) {
+            System.out.println("ERROR: TEMP index overflow");
+        }
+        int TEMP = 5;
+        String absoluteIndex = Integer.toString(TEMP + idx);
+        ACmd atTempIdx = a("@" + absoluteIndex);
+        return new ACmds(popD).add(atTempIdx).add(a("M=D"));
     }
 
     private static String pop(String cmd) {
@@ -133,8 +147,11 @@ public class Parser {
         String index = words[2];
         ACmds result = new ACmds(a("//"));
         switch (segment) {
-            case "local": result = popLocal(index); break;
-            case "argument": result = popArgument(index); break;
+            case "local": result = popVirtualSegment(local, index); break;
+            case "argument": result = popVirtualSegment(arg, index); break;
+            case "this": result = popVirtualSegment(aThis, index); break;
+            case "that": result = popVirtualSegment(aThat, index); break;
+            case "temp": result = popTempSegment(index); break;
         }
         return cmdToString(result);
     }
