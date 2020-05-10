@@ -162,6 +162,7 @@ public class Parser {
 
     private static String gt(State state) {
         // a is greater than b if a - b > 0
+        // TODO abstract IF
 
         String trueSym = "IFTRUEBRANCH";
         String falseSym = "IFFALSEBRANCH";
@@ -209,15 +210,31 @@ public class Parser {
     }
 
     private static String and() {
-        return "";
+        return cmdToString(new
+                ACmds(popD)
+                .add(decSp)
+                .add(derefSp)
+                .add(a("D=M&D"))
+                .add(pushD)
+                );
     }
 
     private static String or() {
-        return "";
+        return cmdToString(new
+                ACmds(popD)
+                .add(decSp)
+                .add(derefSp)
+                .add(a("D=M|D"))
+                .add(pushD)
+                );
     }
 
     private static String not() {
-        return "";
+        return cmdToString(new
+                ACmds(popD)
+                .add(a("D=!D"))
+                .add(pushD)
+                );
     }
 
     private static String dispatch(State state, String cmd) {
