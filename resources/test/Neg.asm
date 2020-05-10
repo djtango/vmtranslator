@@ -12,11 +12,7 @@ M=M-1
 A=M
 D=M
 M=0
-@SP
-M=M-1
 D=!D
-@SP
-M=M+1
 @SP
 A=M
 M=D
@@ -36,11 +32,7 @@ M=M-1
 A=M
 D=M
 M=0
-@SP
-M=M-1
 D=!D
-@SP
-M=M+1
 @SP
 A=M
 M=D
@@ -60,11 +52,7 @@ M=M-1
 A=M
 D=M
 M=0
-@SP
-M=M-1
 D=!D
-@SP
-M=M+1
 @SP
 A=M
 M=D
@@ -84,11 +72,7 @@ M=M-1
 A=M
 D=M
 M=0
-@SP
-M=M-1
 D=!D
-@SP
-M=M+1
 @SP
 A=M
 M=D

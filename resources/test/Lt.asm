@@ -22,6 +22,7 @@ D=M
 M=0
 @SP
 M=M-1
+@SP
 A=M
 D=M-D
 @LTTRUEBRANCH0
@@ -66,6 +67,7 @@ D=M
 M=0
 @SP
 M=M-1
+@SP
 A=M
 D=M-D
 @LTTRUEBRANCH1
@@ -110,6 +112,7 @@ D=M
 M=0
 @SP
 M=M-1
+@SP
 A=M
 D=M-D
 @LTTRUEBRANCH2
@@ -154,6 +157,7 @@ D=M
 M=0
 @SP
 M=M-1
+@SP
 A=M
 D=M-D
 @LTTRUEBRANCH3

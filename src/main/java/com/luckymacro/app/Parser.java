@@ -53,7 +53,7 @@ public class Parser {
     private static final ACmd deleteStackEntry = a("M=0");
     private static final ACmds pushD = new ACmds(derefSp).add(a("M=D")).add(incSp);
     private static final ACmds readSpToMAndAddToD = new ACmds(a("A=M"), a("M=M+D"));
-    private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry).add(decSp);
+    private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry);
 
     private static ACmds readVariableToD(String memSegment, String segAddr) {
         return new ACmds(a(String.format("@%1$s", segAddr)), a("D=A"));
@@ -128,7 +128,7 @@ public class Parser {
         String trueSym = "LTTRUEBRANCH";
         String falseSym = "LTFALSEBRANCH";
         String endSym = "LTEND";
-        ACmds readSpToMAndSubDToD = new ACmds(a("A=M"), a("D=M-D"));
+        ACmds popDSubDFromM = new ACmds(decSp).add(derefSp).add(a("D=M-D"));
         ACmds gotoTrueBranchIfLessThanZero =
             new ACmds(atSym(trueSym), a("D;JLT"));
         ACmds gotoFalseBranch =
@@ -155,7 +155,7 @@ public class Parser {
         ACmds asm =
             new
             ACmds(popD)
-            .add(readSpToMAndSubDToD)
+            .add(popDSubDFromM)
             .add(ifDLessThanZeroThenTrueElseFalse);
         return new CmdBuilder(state).load(asm).finish();
     }
@@ -166,7 +166,7 @@ public class Parser {
         String trueSym = "IFTRUEBRANCH";
         String falseSym = "IFFALSEBRANCH";
         String endSym = "IFEND";
-        ACmds popSubDFromM = new ACmds(derefSp, a("D=M-D"));
+        ACmds popSubDFromM = new ACmds(decSp).add(derefSp).add(a("D=M-D"));
         ACmds gotoEnd = new ACmds(atSym(endSym), a("0;JMP"));
         ACmds gotoTrueBranchIfGreaterThanZero = new ACmds(atSym(trueSym), a("D;JGT"));
         ACmds gotoFalseBranch = new ACmds(atSym(falseSym), a("0;JMP"));
