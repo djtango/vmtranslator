@@ -31,68 +31,13 @@ public class Parser {
         }
     }
 
-    private static final String incSp = "@SP\nM=M+1\n";
-    private static final String decSp = "@SP\nM=M-1\n";
-    private static final String derefSp = "@SP\nA=M\n";
-    private static final String readSpToD = "A=M\nD=M\n";
-    private static final String deleteStackEntry = "M=0\n";
-    private static final String setSpToD = derefSp + "M=D\n";
-    private static final String readSpToMAndAddToD = "A=M\nM=M+D\n";
-    private static final String popD = decSp + readSpToD + deleteStackEntry;
-
-    private static String readVariableToD(String memSegment, String segAddr) {
-        return String.format("@%1$s\nD=A\n", segAddr);
+    private static String cmdToString (ACmds as) {
+        return new CmdBuilder().load(as).finish();
     }
 
-    private static String push(String cmd) {
-        String[] words = cmd.split("\\s");
-        String memSegment = words[1];
-        String segAddr = words[2];
-        return readVariableToD(memSegment, segAddr) + setSpToD + incSp;
+    private static String cmdToString (State state, ACmds as) {
+        return new CmdBuilder(state).load(as).finish();
     }
-
-    private static String add() {
-        return decSp +
-            readSpToD +
-            deleteStackEntry +
-            decSp +
-            readSpToMAndAddToD +
-            incSp;
-    }
-
-    private static String eq(State state) {
-        int counter = state.getCmdCount();
-        String trueBranchSym = "VMeqSetTrueSym" + counter;
-        String falseBranchSym = "VMeqSetFalseSym" + counter;
-        String endOfEqSym = "VMeqEndOfFunctionSym" + counter;
-        state.incCmdCount();
-        String readSpContentsAndSubFromD = "A=M\nD=M-D\n";
-        String registerSetTrue = "(" + trueBranchSym + ")\n";
-        String registerSetFalse = "(" + falseBranchSym + ")\n";
-        String registerEnd = "("+ endOfEqSym +")\n";
-        String setDToTrue = "D=-1\n";
-        String setDToFalse = "D=0\n";
-        String gotoEnd = "@" + endOfEqSym + "\n0;JMP\n";
-        String gotoFalseBranch = "@" + falseBranchSym + "\n0;JMP\n";
-        String gotoTrueBranchIfZero = "@" + trueBranchSym + "\nD;JEQ\n";
-        return decSp +
-            readSpToD +
-            deleteStackEntry +
-            decSp +
-            readSpContentsAndSubFromD +
-            gotoTrueBranchIfZero +
-            gotoFalseBranch +
-            registerSetFalse +
-            setDToFalse +
-            gotoEnd +
-            registerSetTrue +
-            setDToTrue +
-            gotoEnd +
-            registerEnd +
-            setSpToD +
-            incSp;
-    }
-
 
     private static ASym sym(String s) {
         return new ASym(s);
@@ -101,35 +46,108 @@ public class Parser {
         return new ACmd(s);
     }
 
+    private static final ACmds incSp = new ACmds(a("@SP"), a("M=M+1"));
+    private static final ACmds decSp = new ACmds(a("@SP"), a("M=M-1"));
+    private static final ACmds derefSp = new ACmds(a("@SP"), a("A=M"));
+    private static final ACmds readSpToD = new ACmds(a("A=M"), a("D=M"));
+    private static final ACmd deleteStackEntry = a("M=0");
+    private static final ACmds setSpToD = new ACmds(a("@SP")).add(a("A=M")).add(a("M=D"));
+    private static final ACmds readSpToMAndAddToD = new ACmds(a("A=M"), a("M=M+D"));
+    private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry);
+
+    private static ACmds readVariableToD(String memSegment, String segAddr) {
+        return new ACmds(a(String.format("@%1$s", segAddr)), a("D=A"));
+    }
+
+    private static String push(String cmd) {
+        String[] words = cmd.split("\\s");
+        String memSegment = words[1];
+        String segAddr = words[2];
+        return cmdToString(
+                new
+                ACmds(readVariableToD(memSegment, segAddr))
+                .add(setSpToD)
+                .add(incSp)
+                );
+    }
+
+    private static String add() {
+        return cmdToString(
+                new
+                ACmds(decSp)
+                .add(readSpToD)
+                .add(deleteStackEntry)
+                .add(decSp)
+                .add(readSpToMAndAddToD)
+                .add(incSp)
+                );
+    }
+
+    private static ASym register(String sym) {
+        return sym("(" + sym + "%1$s)");
+    }
+
+    private static ASym atSym(String sym) {
+        return sym("@" + sym + "%1$s");
+    }
+
+    private static String eq(State state) {
+        String trueBranchSym = "VMeqSetTrueSym";
+        String falseBranchSym = "VMeqSetFalseSym";
+        String endOfEqSym = "VMeqEndOfFunctionSym";
+        ACmds readSpContentsAndSubFromD = new ACmds(a("A=M"), a("D=M-D"));
+        ASym registerSetTrue = register(trueBranchSym);
+        ASym registerSetFalse = register(falseBranchSym);
+        ASym registerEnd = register(endOfEqSym);
+        ACmd setDToTrue = a("D=-1");
+        ACmd setDToFalse = a("D=0");
+        ACmds gotoEnd = new ACmds(atSym(endOfEqSym), a("0;JMP"));
+        ACmds gotoFalseBranch = new ACmds(atSym(falseBranchSym), a("0;JMP"));
+        ACmds gotoTrueBranchIfZero =  new ACmds(atSym(trueBranchSym), a("D;JEQ"));
+        return cmdToString(state,
+                new
+                ACmds(decSp)
+                .add(readSpToD)
+                .add(deleteStackEntry)
+                .add(decSp)
+                .add(readSpContentsAndSubFromD)
+                .add(gotoTrueBranchIfZero)
+                .add(gotoFalseBranch)
+                .add(registerSetFalse)
+                .add(setDToFalse)
+                .add(gotoEnd)
+                .add(registerSetTrue)
+                .add(setDToTrue)
+                .add(gotoEnd)
+                .add(registerEnd)
+                .add(setSpToD)
+                .add(incSp)
+                );
+    }
+
+
     private static String lt(State state) {
         // a is less than b if a - b < 0
 
-        ACmds decSp = new ACmds(a("@SP"), a("M=M-1"));
-        ACmds readSpToD = new ACmds(a("A=M"), a("D=M"));
-        ACmd deleteStackEntry = a("M=0");
-        ACmds popD =
-            new
-            ACmds(decSp)
-            .add(readSpToD)
-            .add(deleteStackEntry);
+        String trueSym = "LTTRUEBRANCH";
+        String falseSym = "LTFALSEBRANCH";
+        String endSym = "LTEND";
         ACmds readSpToMAndSubDToD = new ACmds(a("A=M"), a("D=M-D"));
-        ACmds setSpToD = new ACmds(a("@SP")).add(a("A=M")).add(a("M=D"));
-        ACmds incSp = new ACmds(a("@SP"), a("M=M+1"));
         ACmds gotoTrueBranchIfLessThanZero =
-            new ACmds(sym("@LTTRUEBRANCH%1$s"), a("D;JLT"));
+            new ACmds(atSym(trueSym), a("D;JLT"));
         ACmds gotoFalseBranch =
-            new ACmds(sym("@LTFALSEBRANCH%1$s"), a("0;JMP"));
+            new ACmds(atSym(falseSym), a("0;JMP"));
         ACmds falseBranch = new
-            ACmds(sym("(LTFALSEBRANCH%1$s)"))
+            ACmds(register(falseSym))
             .add(a("D=0"))
-            .add(sym("@LTEND%1$s"))
+            .add(atSym(endSym))
             .add(a("0;JMP"));
         ACmds trueBranch = new
-            ACmds(sym("(LTTRUEBRANCH%1$s)"))
+            ACmds(register(trueSym))
             .add(a("D=-1"))
-            .add(sym("@LTEND%1$s"))
+            .add(atSym(endSym))
             .add(a("0;JMP"));
-        ASym registerEnd = sym("(LTEND%1$s)");
+        ASym registerEnd = register(endSym);
         ACmds ifDLessThanZeroThenTrueElseFalse =
             new
             ACmds(gotoTrueBranchIfLessThanZero)
@@ -149,17 +167,21 @@ public class Parser {
     }
 
     private static String gt() {
+        // a is greater than b if a - b > 0
+
         return "";
     }
 
     private static String sub() {
-        String readSpToMAndSubD = "A=M\nM=M-D\n";
-        return decSp +
-            readSpToD +
-            deleteStackEntry +
-            decSp +
-            readSpToMAndSubD +
-            incSp;
+        ACmds readSpToMAndSubD = new ACmds(a("A=M"), a("M=M-D"));
+        return cmdToString(new
+                ACmds(decSp)
+                .add(readSpToD)
+                .add(deleteStackEntry)
+                .add(decSp)
+                .add(readSpToMAndSubD)
+                .add(incSp)
+                );
     }
 
     private static String neg() {

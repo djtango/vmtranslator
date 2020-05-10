@@ -6,12 +6,17 @@ import java.util.Arrays;
 
 class CmdBuilder {
     public List<String> out;
-    public Parser.State cmdState;
+    public int cmdCount;
     private StringBuilder sb;
     private CmdBuilder self;
 
     CmdBuilder(Parser.State state) {
-        cmdState = state;
+        cmdCount = state.getCmdCount();
+        state.incCmdCount();
+        out = new ArrayList<String>();
+    }
+
+    CmdBuilder() {
         out = new ArrayList<String>();
     }
 
@@ -20,8 +25,7 @@ class CmdBuilder {
     }
 
     public String ASymToAsm (ASym asym) {
-        int lt = cmdState.getCmdCount();
-        return String.format(asym.value, lt);
+        return String.format(asym.value, cmdCount);
     }
 
     public CmdBuilder load( ACmds as ) {
@@ -45,7 +49,6 @@ class CmdBuilder {
                 sb.append(s + "\n");
             }
         });
-        cmdState.incCmdCount();
         return sb.toString();
     }
 }
