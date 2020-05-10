@@ -1,14 +1,12 @@
 package com.luckymacro.app;
 
-public class ACmd extends AbstractACmd {
+public class ASym extends AbstractACmd {
     public final String value;
-
-    ACmd(String asm) {
-        // validation can go here
+    ASym(String asm) {
         value = asm;
     }
 
     public String accept(CmdBuilder cb) {
-        return cb.ACmdToAsm(this);
+        return cb.ASymToAsm(this);
     }
 }

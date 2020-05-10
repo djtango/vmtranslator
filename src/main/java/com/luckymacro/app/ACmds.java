@@ -5,10 +5,10 @@ import java.util.function.Consumer;
 import java.util.Arrays;
 
 public class ACmds {
-    private final ArrayList<ACmd> asms;
+    private final ArrayList<AbstractACmd> asms;
 
-    ACmds(ACmd a) {
-        ArrayList<ACmd> al;
+    ACmds(AbstractACmd a) {
+        ArrayList<AbstractACmd> al;
         al = new ArrayList<>();
         al.add(a);
         asms = al;
@@ -18,23 +18,23 @@ public class ACmds {
         asms = as.asms;
     }
 
-    ACmds(ACmd a1, ACmd a2) {
-        ArrayList<ACmd> al;
+    ACmds(AbstractACmd a1, AbstractACmd a2) {
+        ArrayList<AbstractACmd> al;
         al = new ArrayList<>();
         al.add(a1);
         al.add(a2);
         asms = al;
     }
 
-    ACmds(ACmds as, ACmd a) {
-        ArrayList<ACmd> al;
+    ACmds(ACmds as, AbstractACmd a) {
+        ArrayList<AbstractACmd> al;
         al = new ArrayList<>(as.asms);
         al.add(a);
         asms = al;
     }
 
-    ACmds(ACmd a, ACmds as) {
-        ArrayList<ACmd> al;
+    ACmds(AbstractACmd a, ACmds as) {
+        ArrayList<AbstractACmd> al;
         al = new ArrayList<>();
         al.add(a);
         al.addAll(as.asms);
@@ -42,13 +42,13 @@ public class ACmds {
     }
 
     ACmds(ACmds as1, ACmds as2) {
-        ArrayList<ACmd> al;
+        ArrayList<AbstractACmd> al;
         al = new ArrayList<>(as1.asms);
         al.addAll(as2.asms);
         asms = al;
     }
 
-    public ACmds add(ACmd a) {
+    public ACmds add(AbstractACmd a) {
         return new ACmds(this, a);
     }
 
@@ -56,7 +56,7 @@ public class ACmds {
         return new ACmds(this, as);
     }
 
-    public ArrayList<ACmd> toArrayList() {
-        return (ArrayList<ACmd>)asms.clone();
+    public ArrayList<AbstractACmd> toArrayList() {
+        return (ArrayList<AbstractACmd>)asms.clone();
     }
 }
