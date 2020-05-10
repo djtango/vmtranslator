@@ -51,9 +51,9 @@ public class Parser {
     private static final ACmds derefSp = new ACmds(a("@SP"), a("A=M"));
     private static final ACmds readSpToD = new ACmds(a("A=M"), a("D=M"));
     private static final ACmd deleteStackEntry = a("M=0");
-    private static final ACmds setSpToD = new ACmds(a("@SP")).add(a("A=M")).add(a("M=D"));
+    private static final ACmds pushD = new ACmds(derefSp).add(a("M=D")).add(incSp);
     private static final ACmds readSpToMAndAddToD = new ACmds(a("A=M"), a("M=M+D"));
-    private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry);
+    private static final ACmds popD = new ACmds(decSp).add(readSpToD).add(deleteStackEntry).add(decSp);
 
     private static ACmds readVariableToD(String memSegment, String segAddr) {
         return new ACmds(a(String.format("@%1$s", segAddr)), a("D=A"));
@@ -65,10 +65,7 @@ public class Parser {
         String segAddr = words[2];
         return cmdToString(
                 new
-                ACmds(readVariableToD(memSegment, segAddr))
-                .add(setSpToD)
-                .add(incSp)
-                );
+                ACmds(readVariableToD(memSegment, segAddr)).add(pushD));
     }
 
     private static String add() {
@@ -120,8 +117,7 @@ public class Parser {
                 .add(setDToTrue)
                 .add(gotoEnd)
                 .add(registerEnd)
-                .add(setSpToD)
-                .add(incSp)
+                .add(pushD)
                 );
     }
 
@@ -155,21 +151,41 @@ public class Parser {
             .add(falseBranch)
             .add(trueBranch)
             .add(registerEnd)
-            .add(setSpToD)
-            .add(incSp);
+            .add(pushD);
         ACmds asm =
             new
             ACmds(popD)
-            .add(decSp)
             .add(readSpToMAndSubDToD)
             .add(ifDLessThanZeroThenTrueElseFalse);
         return new CmdBuilder(state).load(asm).finish();
     }
 
-    private static String gt() {
+    private static String gt(State state) {
         // a is greater than b if a - b > 0
 
-        return "";
+        String trueSym = "IFTRUEBRANCH";
+        String falseSym = "IFFALSEBRANCH";
+        String endSym = "IFEND";
+        ACmds popSubDFromM = new ACmds(derefSp, a("D=M-D"));
+        ACmds gotoEnd = new ACmds(atSym(endSym), a("0;JMP"));
+        ACmds gotoTrueBranchIfGreaterThanZero = new ACmds(atSym(trueSym), a("D;JGT"));
+        ACmds gotoFalseBranch = new ACmds(atSym(falseSym), a("0;JMP"));
+        ACmds trueBranch = new ACmds(register(trueSym)).add(a("D=-1")).add(gotoEnd);
+        ACmds falseBranch = new ACmds(register(falseSym)).add(a("D=0")).add(gotoEnd);
+        ACmds ifDGreaterThanZeroThenTrueElseFalse = new
+            ACmds(gotoTrueBranchIfGreaterThanZero)
+            .add(gotoFalseBranch)
+            .add(falseBranch)
+            .add(trueBranch)
+            .add(register(endSym))
+            .add(pushD);
+
+        return cmdToString(state,
+            new
+            ACmds(popD)
+            .add(popSubDFromM)
+            .add(ifDGreaterThanZeroThenTrueElseFalse)
+            );
     }
 
     private static String sub() {
@@ -208,7 +224,7 @@ public class Parser {
             case "push": result = push(cmd); break;
             case "eq": result = eq(state); break;
             case "lt": result = lt(state); break;
-            case "gt": result = gt(); break;
+            case "gt": result = gt(state); break;
             case "add": result = add(); break;
             case "sub": result = sub(); break;
             case "neg": result = neg(); break;

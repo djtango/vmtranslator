@@ -1,0 +1,12 @@
+push constant 2
+push constant 1
+gt
+push constant 1
+push constant 2
+gt
+push constant 5
+push constant 2
+gt
+push constant 4
+push constant 4
+gt
