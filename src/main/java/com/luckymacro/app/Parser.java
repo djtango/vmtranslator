@@ -85,6 +85,20 @@ public class Parser {
         return Integer.toString(TEMP + idx);
     }
 
+    private static ACmds pushPointer(String index) {
+        int idx = Integer.parseInt(index);
+        if (idx > 1 || idx < 0) {
+            System.out.println("ERROR: invalid pointer index supplied");
+        }
+        int THIS = 3;
+        String absoluteIndex = Integer.toString(THIS + idx);
+        ACmd atPtrIdx = a("@" + absoluteIndex);
+        return new
+            ACmds(atPtrIdx)
+            .add(a("D=M"))
+            .add(pushD);
+    }
+
     private static ACmds pushTempSegment(String index) {
         ACmd atTempIdx = a("@" + absoluteTempIndex(index));
         return new
@@ -105,6 +119,7 @@ public class Parser {
             case "this": result = pushVirtualSegment(aThis, index); break;
             case "that": result = pushVirtualSegment(aThat, index); break;
             case "temp": result = pushTempSegment(index); break;
+            case "pointer": result = pushPointer(index); break;
         }
         return cmdToString(result);
     }
@@ -130,6 +145,17 @@ public class Parser {
             .add(freeIndex);
     }
 
+    private static ACmds popPointer(String index) {
+        int idx = Integer.parseInt(index);
+        if (idx > 1 || idx < 0) {
+            System.out.println("ERROR: invalid pointer index supplied");
+        }
+        int THIS = 3;
+        String absoluteIndex = Integer.toString(THIS + idx);
+        ACmd atPtrIdx = a("@" + absoluteIndex);
+        return new ACmds(popD).add(atPtrIdx).add(a("M=D"));
+    }
+
     private static ACmds popTempSegment(String index) {
         int idx = Integer.parseInt(index);
         if (idx > 7) {
@@ -152,6 +178,7 @@ public class Parser {
             case "this": result = popVirtualSegment(aThis, index); break;
             case "that": result = popVirtualSegment(aThat, index); break;
             case "temp": result = popTempSegment(index); break;
+            case "pointer": result = popPointer(index); break;
         }
         return cmdToString(result);
     }
