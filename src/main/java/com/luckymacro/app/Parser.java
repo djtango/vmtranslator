@@ -1,9 +1,9 @@
 package com.luckymacro.app;
 
 public class Parser {
-    public static String parse( String vmcode ) {
+    public static String parse( String filename, String vmcode ) {
         State state;
-        state = new State();
+        state = new State(filename);
         String[] lines = vmcode.split("\\n");
         StringBuilder sb = new StringBuilder();
         for (int i=0; i < lines.length; i += 1) {
@@ -18,7 +18,9 @@ public class Parser {
 
     public static class State {
         private int cmdCount;
-        private State () {
+        private String filename;
+        private State (String fname) {
+            filename = fname;
             cmdCount = 0;
         }
 
@@ -28,6 +30,10 @@ public class Parser {
 
         public int incCmdCount() {
             return cmdCount += 1;
+        }
+
+        public String getFilename() {
+            return filename;
         }
     }
 
@@ -44,6 +50,10 @@ public class Parser {
     }
     private static ACmd a(String s) {
         return new ACmd(s);
+    }
+
+    private static AStaticSym sSym(String index) {
+        return new AStaticSym(index);
     }
 
     private static final ACmd sp = a("@SP");
@@ -99,6 +109,13 @@ public class Parser {
             .add(pushD);
     }
 
+    private static ACmds pushStatic(String index) {
+        return new
+            ACmds(sSym(index))
+            .add(a("D=M"))
+            .add(pushD);
+    }
+
     private static ACmds pushTempSegment(String index) {
         ACmd atTempIdx = a("@" + absoluteTempIndex(index));
         return new
@@ -107,7 +124,7 @@ public class Parser {
             .add(pushD);
     }
 
-    private static String push(String cmd) {
+    private static String push(State state, String cmd) {
         String[] words = cmd.split("\\s");
         String segment = words[1];
         String index = words[2];
@@ -120,8 +137,9 @@ public class Parser {
             case "that": result = pushVirtualSegment(aThat, index); break;
             case "temp": result = pushTempSegment(index); break;
             case "pointer": result = pushPointer(index); break;
+            case "static": result = pushStatic(index); break;
         }
-        return cmdToString(result);
+        return cmdToString(state, result);
     }
 
     private static ACmds storeSegmentPointer(ACmd atSegment, String index) {
@@ -167,7 +185,11 @@ public class Parser {
         return new ACmds(popD).add(atTempIdx).add(a("M=D"));
     }
 
-    private static String pop(String cmd) {
+    private static ACmds popStatic(String index) {
+        return new ACmds(popD).add(sSym(index)).add(a("M=D"));
+    }
+
+    private static String pop(State state, String cmd) {
         String[] words = cmd.split("\\s");
         String segment = words[1];
         String index = words[2];
@@ -179,8 +201,9 @@ public class Parser {
             case "that": result = popVirtualSegment(aThat, index); break;
             case "temp": result = popTempSegment(index); break;
             case "pointer": result = popPointer(index); break;
+            case "static": result = popStatic(index); break;
         }
-        return cmdToString(result);
+        return cmdToString(state, result);
     }
 
     private static String add() {
@@ -357,8 +380,8 @@ public class Parser {
         String command = words[0];
         String result = "";
         switch (command) {
-            case "push": result = push(cmd); break;
-            case "pop": result = pop(cmd); break;
+            case "push": result = push(state, cmd); break;
+            case "pop": result = pop(state, cmd); break;
             case "eq": result = eq(state); break;
             case "lt": result = lt(state); break;
             case "gt": result = gt(state); break;

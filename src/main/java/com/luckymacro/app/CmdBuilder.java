@@ -6,12 +6,14 @@ import java.util.Arrays;
 
 class CmdBuilder {
     public List<String> out;
-    public int cmdCount;
+    private int cmdCount;
+    private String filename;
     private StringBuilder sb;
     private CmdBuilder self;
 
     CmdBuilder(Parser.State state) {
         cmdCount = state.getCmdCount();
+        filename = state.getFilename();
         state.incCmdCount();
         out = new ArrayList<String>();
     }
@@ -26,6 +28,10 @@ class CmdBuilder {
 
     public String ASymToAsm (ASym asym) {
         return String.format(asym.value, cmdCount);
+    }
+
+    public String AStaticSymToAsm (AStaticSym assym) {
+        return String.format("@%1$s.%2$s", filename, assym.value);
     }
 
     public CmdBuilder load( ACmds as ) {

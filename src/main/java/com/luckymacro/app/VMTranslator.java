@@ -9,7 +9,7 @@ public class VMTranslator {
         String[] paths = args[0].split("\\.vm");
         String filename = paths[0];
         String fileContents = FileReader.read(filename + ".vm");
-        String output = Parser.parse(fileContents);
+        String output = Parser.parse(filename, fileContents);
         FileWriter.write(filename + ".asm", output);
     }
 }

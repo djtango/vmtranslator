@@ -20,7 +20,7 @@ public class ParserTest {
         "// add\n" + l3;
     @Test
     public void parserShouldCompileAddition() {
-        String result = Parser.parse(lines);
+        String result = Parser.parse("test_filename", lines);
         assertTrue(result.contentEquals(expt));
     }
 
