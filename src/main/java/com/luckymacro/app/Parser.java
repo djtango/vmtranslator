@@ -218,12 +218,12 @@ public class Parser {
                 );
     }
 
-    private static ASym register(String sym) {
-        return sym("(" + sym + "%1$s)");
+    private static ASym register(String symStr) {
+        return sym("(" + symStr + "%1$s)");
     }
 
-    private static ASym atSym(String sym) {
-        return sym("@" + sym + "%1$s");
+    private static ASym atSym(String symStr) {
+        return sym("@" + symStr + "%1$s");
     }
 
     private static String eq(State state) {
@@ -375,6 +375,33 @@ public class Parser {
                 );
     }
 
+    private static String label(String cmd) {
+        // scope of the label is the function in which it is defined
+        String[] words = cmd.split("\\s");
+        String labelStr = words[1];
+        return cmdToString(new ACmds(a("("+ labelStr +")")));
+    }
+
+    private static String ifGoto(String cmd) {
+        String[] words = cmd.split("\\s");
+        String labelStr = words[1];
+        return cmdToString(new
+                ACmds(popD)
+                .add(a("@"+ labelStr))
+                .add(a("D;JGT"))
+                );
+    }
+
+    private static String _goto(String cmd) {
+        String[] words = cmd.split("\\s");
+        String labelStr = words[1];
+        return cmdToString(new
+                ACmds(a("@"+ labelStr))
+                .add(a("0;JMP"))
+                );
+    }
+
+
     private static String dispatch(State state, String cmd) {
         String[] words = cmd.split("\\s");
         String command = words[0];
@@ -382,6 +409,9 @@ public class Parser {
         switch (command) {
             case "push": result = push(state, cmd); break;
             case "pop": result = pop(state, cmd); break;
+            case "label": result = label(cmd); break;
+            case "goto": result = _goto(cmd); break;
+            case "if-goto": result = ifGoto(cmd); break;
             case "eq": result = eq(state); break;
             case "lt": result = lt(state); break;
             case "gt": result = gt(state); break;
@@ -391,6 +421,7 @@ public class Parser {
             case "and": result = and(); break;
             case "or": result = or(); break;
             case "not": result = not(); break;
+            default: result = "unrecognised input: " + cmd; break;
         }
         return result;
     }
