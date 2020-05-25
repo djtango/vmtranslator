@@ -37,6 +37,10 @@ public class Parser {
         }
     }
 
+    private static String[] splitws (String s) {
+        return s.split("\\s");
+    }
+
     private static String cmdToString (ACmds as) {
         return new CmdBuilder().load(as).finish();
     }
@@ -125,7 +129,7 @@ public class Parser {
     }
 
     private static String push(State state, String cmd) {
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String segment = words[1];
         String index = words[2];
         ACmds result = new ACmds(a("//"));
@@ -190,7 +194,7 @@ public class Parser {
     }
 
     private static String pop(State state, String cmd) {
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String segment = words[1];
         String index = words[2];
         ACmds result = new ACmds(a("//"));
@@ -377,33 +381,83 @@ public class Parser {
 
     private static String label(String cmd) {
         // scope of the label is the function in which it is defined
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String labelStr = words[1];
         return cmdToString(new ACmds(a("("+ labelStr +")")));
     }
 
     private static String ifGoto(String cmd) {
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String labelStr = words[1];
         return cmdToString(new
                 ACmds(popD)
-                .add(a("@"+ labelStr))
+                .add(a("@" + labelStr))
                 .add(a("D;JGT"))
                 );
     }
 
+    private static ACmds aGoto(ACmd aLabel) {
+        return new ACmds(aLabel).add(a("0;JMP"));
+    }
+    private static ACmds aGoto(ACmds aLabel) {
+        return new ACmds(aLabel).add(a("0;JMP"));
+    }
+
     private static String _goto(String cmd) {
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String labelStr = words[1];
+        ACmd aLabel = a("@"+labelStr);
+        return cmdToString(aGoto(aLabel));
+    }
+
+    private static String function(String cmd) {
+        String[] words = splitws(cmd);
+        String fn = words[1];
+        int nArgs = Integer.parseInt(words[2]);
+        ACmds result = new ACmds(a("(" + fn + ")"));
+        for (int i = 0; nArgs > i; i += 1) {
+            result = result.add(pushConstant("0"));
+        }
+        return cmdToString(result);
+    }
+
+    private static ACmds set(ACmd x, ACmds expr) {
+        return new ACmds(expr).add(x).add(a("M=D"));
+    }
+
+    private static ACmds xSubY(ACmd x, int y) {
+        String yStr = Integer.toString(y);
+        return new ACmds(x).add(a("D=M")).add(a("@" + yStr)).add(a("D=D-A"));
+    }
+
+    private static String _return() {
+        ACmds setFrameToLocal = set(temp, new ACmds(local).add(a("D=M")));
+        ACmds derefDToD = new ACmds(a("A=D")).add(a("D=M"));
+        ACmd RET = a("@6");
+        ACmds getReturnAddr = set(RET, xSubY(temp, 5).add(derefDToD));
+        ACmds setReturnValueToArg0 = new ACmds(popD).add(arg).add(a("A=M")).add(a("M=D"));
+        ACmds setSPToArg1 = set(sp, new ACmds(arg).add(a("D=M")).add(a("D=D+1")));
+        ACmds setThatToFrameSub1 = set(aThat, xSubY(temp, 1).add(derefDToD));
+        ACmds setThisToFrameSub2 = set(aThis, xSubY(temp, 2).add(derefDToD));
+        ACmds setArgToFrameSub3 = set(arg, xSubY(temp, 3).add(derefDToD));
+        ACmds setLclToFrameSub4 = set(local, xSubY(temp, 4).add(derefDToD));
+        ACmds gotoRet = aGoto(new ACmds(RET).add(a("A=M")));
         return cmdToString(new
-                ACmds(a("@"+ labelStr))
-                .add(a("0;JMP"))
+                ACmds(setFrameToLocal)
+                .add(getReturnAddr)
+                .add(setReturnValueToArg0)
+                .add(setSPToArg1)
+                .add(setThatToFrameSub1)
+                .add(setThisToFrameSub2)
+                .add(setArgToFrameSub3)
+                .add(setLclToFrameSub4)
+                .add(gotoRet)
                 );
     }
 
 
     private static String dispatch(State state, String cmd) {
-        String[] words = cmd.split("\\s");
+        String[] words = splitws(cmd);
         String command = words[0];
         String result = "";
         switch (command) {
@@ -412,6 +466,8 @@ public class Parser {
             case "label": result = label(cmd); break;
             case "goto": result = _goto(cmd); break;
             case "if-goto": result = ifGoto(cmd); break;
+            case "function": result = function(cmd); break;
+            case "return": result = _return(); break;
             case "eq": result = eq(state); break;
             case "lt": result = lt(state); break;
             case "gt": result = gt(state); break;
