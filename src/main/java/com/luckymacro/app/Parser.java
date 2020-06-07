@@ -403,7 +403,7 @@ public class Parser {
         return cmdToString(new
                 ACmds(popD)
                 .add(a("@" + labelStr))
-                .add(a("D;JGT"))
+                .add(a("D;JNE"))
                 );
     }
 
