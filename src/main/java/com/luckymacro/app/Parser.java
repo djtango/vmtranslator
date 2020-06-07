@@ -66,6 +66,8 @@ public class Parser {
     private static final ACmd aThis = a("@THIS");
     private static final ACmd aThat = a("@THAT");
     private static final ACmd temp = a("@5");
+    private static final ACmd temp2 = a("@6");
+    private static final ACmd temp3 = a("@7");
 
     private static final ACmds incSp = new ACmds(sp, a("M=M+1"));
     private static final ACmds decSp = new ACmds(sp, a("M=M-1"));
@@ -230,6 +232,15 @@ public class Parser {
         return sym("@" + symStr + "%1$s");
     }
 
+    private static ACmds set(ACmd x, ACmds expr) {
+        return new ACmds(expr).add(x).add(a("M=D"));
+    }
+
+    private static ACmds xSubY(ACmd x, int y) {
+        String yStr = Integer.toString(y);
+        return new ACmds(x).add(a("D=M")).add(a("@" + yStr)).add(a("D=D-A"));
+    }
+
     private static String eq(State state) {
         String trueBranchSym = "VMeqSetTrueSym";
         String falseBranchSym = "VMeqSetFalseSym";
@@ -380,7 +391,7 @@ public class Parser {
     }
 
     private static String label(String cmd) {
-        // scope of the label is the function in which it is defined
+        // TODO scope of the label is the function in which it is defined
         String[] words = splitws(cmd);
         String labelStr = words[1];
         return cmdToString(new ACmds(a("("+ labelStr +")")));
@@ -410,6 +421,32 @@ public class Parser {
         return cmdToString(aGoto(aLabel));
     }
 
+    private static String call(State state, String cmd) {
+        String[] words = splitws(cmd);
+        String fn = words[1];
+        int nArgs = Integer.parseInt(words[2]);
+        String returnAddressSym = "RETURN$" + fn;
+        ACmds saveReturnAddress = new ACmds(atSym(returnAddressSym)).add(a("D=A")).add(pushD);
+        ACmds pushLocal = new ACmds(local, a("D=M")).add(pushD);
+        ACmds pushArg = new ACmds(arg, a("D=M")).add(pushD);
+        ACmds pushThis = new ACmds(aThis, a("D=M")).add(pushD);
+        ACmds pushThat = new ACmds(aThat, a("D=M")).add(pushD);
+        ACmds setArgToSpSubNSub5 = set(arg, xSubY(sp, (5 + nArgs)));
+        ACmds setLclToSp = set(local, new ACmds(sp).add(a("D=M")));
+        return cmdToString(state,
+                new
+                ACmds(saveReturnAddress)
+                .add(pushLocal)
+                .add(pushArg)
+                .add(pushThis)
+                .add(pushThat)
+                .add(setArgToSpSubNSub5)
+                .add(setLclToSp)
+                .add(aGoto(a("@"+fn)))
+                .add(register(returnAddressSym))
+                );
+    }
+
     private static String function(String cmd) {
         String[] words = splitws(cmd);
         String fn = words[1];
@@ -421,26 +458,17 @@ public class Parser {
         return cmdToString(result);
     }
 
-    private static ACmds set(ACmd x, ACmds expr) {
-        return new ACmds(expr).add(x).add(a("M=D"));
-    }
-
-    private static ACmds xSubY(ACmd x, int y) {
-        String yStr = Integer.toString(y);
-        return new ACmds(x).add(a("D=M")).add(a("@" + yStr)).add(a("D=D-A"));
-    }
-
     private static String _return() {
-        ACmds setFrameToLocal = set(temp, new ACmds(local).add(a("D=M")));
+        ACmds setFrameToLocal = set(temp3, new ACmds(local).add(a("D=M")));
         ACmds derefDToD = new ACmds(a("A=D")).add(a("D=M"));
         ACmd RET = a("@6");
-        ACmds getReturnAddr = set(RET, xSubY(temp, 5).add(derefDToD));
+        ACmds getReturnAddr = set(RET, xSubY(temp3, 5).add(derefDToD));
         ACmds setReturnValueToArg0 = new ACmds(popD).add(arg).add(a("A=M")).add(a("M=D"));
         ACmds setSPToArg1 = set(sp, new ACmds(arg).add(a("D=M")).add(a("D=D+1")));
-        ACmds setThatToFrameSub1 = set(aThat, xSubY(temp, 1).add(derefDToD));
-        ACmds setThisToFrameSub2 = set(aThis, xSubY(temp, 2).add(derefDToD));
-        ACmds setArgToFrameSub3 = set(arg, xSubY(temp, 3).add(derefDToD));
-        ACmds setLclToFrameSub4 = set(local, xSubY(temp, 4).add(derefDToD));
+        ACmds setThatToFrameSub1 = set(aThat, xSubY(temp3, 1).add(derefDToD));
+        ACmds setThisToFrameSub2 = set(aThis, xSubY(temp3, 2).add(derefDToD));
+        ACmds setArgToFrameSub3 = set(arg, xSubY(temp3, 3).add(derefDToD));
+        ACmds setLclToFrameSub4 = set(local, xSubY(temp3, 4).add(derefDToD));
         ACmds gotoRet = aGoto(new ACmds(RET).add(a("A=M")));
         return cmdToString(new
                 ACmds(setFrameToLocal)
@@ -455,6 +483,18 @@ public class Parser {
                 );
     }
 
+    public static String bootstrap() {
+        State state = new State("__Bootstrap__");
+        ACmds aInitSP = new
+            ACmds(a("@256"))
+            .add(a("D=A"))
+            .add(a("@SP"))
+            .add(a("M=D"));
+        String initSp = new CmdBuilder().load(aInitSP).finish();
+        String callSysInit = call(state, "call Sys.init 0");
+        return initSp + callSysInit;
+    }
+
 
     private static String dispatch(State state, String cmd) {
         String[] words = splitws(cmd);
@@ -466,6 +506,7 @@ public class Parser {
             case "label": result = label(cmd); break;
             case "goto": result = _goto(cmd); break;
             case "if-goto": result = ifGoto(cmd); break;
+            case "call": result = call(state, cmd); break;
             case "function": result = function(cmd); break;
             case "return": result = _return(); break;
             case "eq": result = eq(state); break;
