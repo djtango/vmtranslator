@@ -31,7 +31,9 @@ class CmdBuilder {
     }
 
     public String AStaticSymToAsm (AStaticSym assym) {
-        return String.format("@%1$s.%2$s", filename, assym.value);
+        String stripExtension = filename.split("\\.vm")[0];
+        String staticFilename = stripExtension.replaceAll("\\/", ".");
+        return String.format("@%1$s.%2$s", staticFilename, assym.value);
     }
 
     public CmdBuilder load( ACmds as ) {
